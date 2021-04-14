@@ -1,9 +1,9 @@
 # Adding Nodes Outside of a MachineSet in vSphere IPI Clusters
 ### By: Michael McNeill
 ------
-OpenShift 4 brought a new paradigm for cluster installation: installer-provisioned infrastructure (also known as IPI). This full-stack automation experience works not only on public cloud providers like AWS, Azure, and Google Cloud, but also on private cloud and on-premise environments such as vSphere, OpenStack, and more. Creating a cluster with installer-provisioned infrastructure is very easy, and delegates the infrastructure bootstrapping and provisioning to the openshift-install command line utility. The installer utility creates all the networking, machines, and operating systems that are required to support the cluster. 
+OpenShift 4 introduced a new paradigm for cluster installation: installer-provisioned infrastructure (also known as IPI). This full-stack automation experience works not only on public cloud providers like AWS, Azure, and Google Cloud, but also on private cloud and on-premise environments such as vSphere, OpenStack, and more. Creating a cluster with installer-provisioned infrastructure is very easy, and delegates the infrastructure bootstrapping and provisioning to the openshift-install command line utility. The installer utility creates all the networking, machines, and operating systems that are required to support the cluster. 
 
-With all the benefits of installer-provisioned infrastructure, there is also an important drawback to consider, especially in vSphere environments: there are limited customizations allowed to the underlying virtual machines created by OpenShift. In my specific case, I needed to passthrough three different SSDs directly (via RDM in vSphere) to the underlying virtual machine to provide local backing storage for OpenShift Container Storage. While some of the cloud provider integrations (namely AWS) support adding additional block storage beyond the root volume, the vSphere provider does not. In addition, editing virtual machines created by a MachineSet is not supported and can result in many additional issues. The solution to this problem is to follow a similar path as the control plane nodes: manually provision them outside of a MachineSet using the user-provisioned infrastructure (UPI) methodology. 
+With all the benefits of installer-provisioned infrastructure, there is also an important drawback to consider, especially in vSphere environments: there are limited customizations allowed to the underlying virtual machines created by OpenShift. In my specific case, I needed to passthrough three different SSDs directly (via RDM in vSphere) to the underlying virtual machine to provide local backing storage for OpenShift Container Storage. While some of the cloud provider integrations (namely AWS) support adding additional block volumes beyond the root volume, the vSphere provider does not. In addition, editing virtual machines created by a MachineSet is not supported and can result in many additional issues. The solution to this problem is to follow a similar path as the control plane nodes: manually provision them outside of a MachineSet using the user-provisioned infrastructure (UPI) methodology. 
 
 This blog posts walks through the addition of a node outside of a MachineSet in an existing vSphere IPI cluster. While this blog post focuses specifically on vSphere IPI clusters, the procedure is similar with other cloud providers (both public cloud and private cloud/on-premise). The procedures discussed in this blog post use OpenShift 4.7 and vSphere 6.7U3 (although vSphere 7.x should also work).
 
@@ -17,8 +17,7 @@ Now that we’ve gotten that out of the way, let’s proceed with the process:
 ### Step 1
 
 Extract the compute node ignition configuration. 
-Ensure that you are logged into the OpenShift command line utility (the oc tools). 
-Execute the following command:
+Ensure that you are logged into the OpenShift command line utility (the oc tools) and execute the following command:
 ```bash
 oc extract -n openshift-machine-api secret/worker-user-data --keys=userData --to=- | base64
 ```
@@ -32,11 +31,13 @@ Make note of the base64 encoded result for use later in the process.
 
 ### Step 2
 
-Login to vSphere and clone the rhocs virtual machine template to your new virtual machine. 
+Login to vSphere and clone the rhocs virtual machine template to your new virtual machine. Ensure you are cloning ***the rhcos template that has never been started***, not another virtual machine!
+
+![Clone a virtual machine vSphere menu](images/clone-template-vsphere-menu.png)
 
 ### Step 3
 
-Enter the hostname you wish to use, in my case, I’m using the existing format: ocp-cfr5c-test-1. Select the folder that the existing OpenShift cluster has been installed in and select “Next”. 
+Enter the hostname you wish to use, in my case, I’m using the existing format: `ocp-cfr5c-test-1`. Select the folder that the existing OpenShift cluster has been installed in and select “Next”. 
 
 ![Select a name and folder vSphere screen](images/select-name-and-folder.png)
 
