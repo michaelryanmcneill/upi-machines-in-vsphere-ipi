@@ -3,7 +3,7 @@
 ------
 OpenShift 4 introduced a new paradigm for cluster installation: installer-provisioned infrastructure (also known as IPI). This full-stack automation experience works not only on public cloud providers like AWS, Azure, and Google Cloud, but also on private cloud and on-premise environments such as vSphere, OpenStack, and more. Creating a cluster with installer-provisioned infrastructure is very easy, and delegates the infrastructure bootstrapping and provisioning to the openshift-install command line utility. The installer utility creates all the networking, machines, and operating systems that are required to support the cluster. 
 
-With all the benefits of installer-provisioned infrastructure, there is also an important drawback to consider, especially in vSphere environments: there are limited customizations allowed to the underlying virtual machines created by OpenShift. In my specific case, I needed to passthrough three different SSDs directly (via RDM in vSphere) to the underlying virtual machine to provide local backing storage for OpenShift Container Storage. While some of the cloud provider integrations (namely AWS) support adding additional block volumes beyond the root volume, the vSphere provider does not. In addition, editing virtual machines created by a MachineSet is not supported and can result in many additional issues. The solution to this problem is to follow a similar path as the control plane nodes: manually provision them outside of a MachineSet using the user-provisioned infrastructure (UPI) methodology. 
+With all the benefits of installer-provisioned infrastructure, there is also an important drawback to consider, especially in vSphere environments: there are limited customizations allowed to the underlying virtual machines created by OpenShift. In my specific case, I needed to passthrough three different SSDs directly (via RDM in vSphere) to the underlying virtual machine to provide local backing storage for [OpenShift Container Storage](https://www.redhat.com/en/technologies/cloud-computing/openshift-data-foundation). While some of the cloud provider integrations (namely AWS) support adding additional block volumes beyond the root volume, the vSphere provider does not. In addition, editing virtual machines created by a MachineSet is not supported and can result in many additional issues. The solution to this problem is to follow a similar path as the control plane nodes: manually provision them outside of a MachineSet using the user-provisioned infrastructure (UPI) methodology. 
 
 This blog posts walks through the addition of a node outside of a MachineSet in an existing vSphere IPI cluster. While this blog post focuses specifically on vSphere IPI clusters, the procedure is similar with other cloud providers (both public cloud and private cloud/on-premise). The procedures discussed in this blog post use OpenShift 4.7 and vSphere 6.7U3 (although vSphere 7.x should also work).
 
@@ -18,12 +18,12 @@ Now that we’ve gotten that out of the way, let’s proceed with the process:
 
 Extract the compute node ignition configuration. 
 Ensure that you are logged into the OpenShift command line utility (the oc tools) and execute the following command:
-```bash
+```
 oc extract -n openshift-machine-api secret/worker-user-data --keys=userData --to=- | base64
 ```
 
 The output will be similar to:
-```bash
+```
 # userData
 eyJpZ25pdGlvbiI6eyJjb25maWciOnsibWVyZ2UiOlt7InNvdXJjZSI6Imh0dHBzOi8veHh4Lnh4eC54eHgueHh4OjIyNjIzL2NvbmZpZy93b3JrZXIifV19LCJzZWN1cml0eSI6eyJ0bHMiOnsiY2VydGlmaWNhdGVBdXRob3JpdGllcyI6W3sic291cmNlIjoiZGF0YTp0ZXh0L3BsYWluO2NoYXJzZXQ9dXRmLTg7YmFzZTY0LFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFg9PSJ9XX19LCJ2ZXJzaW9uIjoiMy4yLjAifX0iCg==
 ```
@@ -110,12 +110,12 @@ Once the machine has been successfully cloned, monitor the virtual console to en
 ### Step 14
 Once the machine has successfully booted and shows the proper hostname (don’t be alarmed if it reboots after successfully booting). Watch for the node-bootstraper certificate signing request to show up as pending. Note, it could take a few minutes for the CSR to be issued.
 To check for the CSR, execute the following command (you may have to run it a few times):
-```bash
+```
 oc get csr
 ```
 
 The output will be similar to:
-```bash
+```
 NAME        AGE   SIGNERNAME                                    REQUESTOR                                                                   CONDITION
 csr-2s7tn   66s   kubernetes.io/kube-apiserver-client-kubelet   system:serviceaccount:openshift-machine-config-operator:node-bootstrapper   Pending
 ```
@@ -125,11 +125,11 @@ csr-2s7tn   66s   kubernetes.io/kube-apiserver-client-kubelet   system:serviceac
 Approve the certificate signing request for the node-bootstraper by copying the name of the CSR.
 
 To approve the CSR, execute the following command (making sure to replace the \<csr-name\> with the name of the CSR):
-```bash
+```
 oc adm certificate approve <csr-name>
 ```
 The output will be similar to:
-```bash
+```
 certificatesigningrequest.certificates.k8s.io/csr-2s7tn approved
 ```
 
@@ -137,11 +137,11 @@ certificatesigningrequest.certificates.k8s.io/csr-2s7tn approved
 
 Watch again for the node’s certificate signing request to show up as pending.  
 To check for the CSR, execute the following command (you may have to run it a few times):
-```bash
+```
 oc get csr
 ```
 The output will be similar to:
-```bash
+```
 NAME        AGE     SIGNERNAME                                    REQUESTOR                                                                   CONDITION
 csr-2s7tn   2m24s   kubernetes.io/kube-apiserver-client-kubelet   system:serviceaccount:openshift-machine-config-operator:node-bootstrapper   Approved,Issued
 csr-snghc   4s      kubernetes.io/kubelet-serving                 system:node:ocp-cfr5c-test-1                                                Pending
@@ -150,11 +150,11 @@ csr-snghc   4s      kubernetes.io/kubelet-serving                 system:node:oc
 Approve the certificate signing request for the node itself. 
 
 To approve the CSR, execute the following command (making sure to replace the \<csr-name\> with the name of the CSR):
-```bash
+```
 oc adm certificate approve <csr-name>
 ```
 The output will be similar to:
-```bash
+```
 certificatesigningrequest.certificates.k8s.io/csr-snghc approved
 ```
 
@@ -162,11 +162,11 @@ certificatesigningrequest.certificates.k8s.io/csr-snghc approved
 
 Wait for the node to become ready by watching the output of the following command:
 
-```bash
+```
 oc get nodes -w
 ```
 The output will be similar to:
-```bash
+```
 NAME                     STATUS   ROLES            AGE     VERSION
 ocp-cfr5c-infra-99rgg    Ready    infra,worker     7d4h    v1.20.0+bafe72f
 ocp-cfr5c-infra-fq5bq    Ready    infra,worker     7d4h    v1.20.0+bafe72f
@@ -189,7 +189,7 @@ Once you see the node become ready, hit Control+c to kill the command.
 
 Create a Machine to describe the host for your newly created node. For the purposes of this blog, you can modify the below example, or you can create your own. 
 
-```yaml
+```
 apiVersion: machine.openshift.io/v1beta1
 kind: Machine
 metadata:
@@ -234,12 +234,12 @@ spec:
 ```
 
 Modify and save this file (I'm calling it upi-machine.yaml, but you can call it whatever you'd like), then execute the following command to create it in OpenShift:
-```bash
+```
 oc create -f upi-machine.yaml
 ```
 
 The output will be similar to:
-```bash
+```
 machine.machine.openshift.io/ocp-cfr5c-test-1 created
 ```
 
@@ -248,12 +248,12 @@ machine.machine.openshift.io/ocp-cfr5c-test-1 created
 Finally, verify that the machine was properly configured with the VMware UUID in the `.spec.providerID` field and that the machine is annotated with the `machine.openshift.io/instance-state: poweredOn` annotation. 
 
 To do this, execute the following command:
-```bash
+```
 oc describe machine ocp-cfr5c-test-1 -n openshift-machine-api
 ```
 
 The output will be similar to:
-```bash
+```
 Name:         ocp-cfr5c-test-1
 Namespace:    openshift-machine-api
 Labels: ...
