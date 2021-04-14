@@ -1,5 +1,8 @@
 # Adding Nodes Outside of a MachineSet in vSphere IPI Clusters
 ### By: Michael McNeill
+
+![Primary Header Image](images/primary-header-image.png)
+
 ------
 OpenShift 4 introduced a new paradigm for cluster installation: installer-provisioned infrastructure (also known as IPI). This full-stack automation experience works not only on public cloud providers like AWS, Azure, and Google Cloud, but also on private cloud and on-premise environments such as vSphere, OpenStack, and more. Creating a cluster with installer-provisioned infrastructure is very easy, and delegates the infrastructure bootstrapping and provisioning to the openshift-install command line utility. The installer utility creates all the networking, machines, and operating systems that are required to support the cluster. 
 
