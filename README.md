@@ -34,7 +34,7 @@ Make note of the base64 encoded result for use later in the process.
 
 ### Step 2
 
-Login to vSphere and clone the rhocs virtual machine template to your new virtual machine. Ensure you are cloning ***the rhcos template that has never been started***, not another virtual machine!
+Login to vSphere and clone the rhcos virtual machine template to your new virtual machine. Ensure you are cloning ***the rhcos template that has never been started***, not another virtual machine!
 
 ![Clone a virtual machine vSphere menu](images/clone-template-vsphere-menu.png)
 
