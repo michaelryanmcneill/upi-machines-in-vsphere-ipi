@@ -83,14 +83,14 @@ Hit the “Add Configuration Params” button four times to add four new configu
 
 ### Step 10
 
-Add the following four parameters to the new configuration parameter blank fields and select “Ok” and then select “Next” to proceed. Ensure that you replace the content within the `{{}}` with the content specified.
+Add the following four parameters to the new configuration parameter blank fields and select “Ok” and then select “Next” to proceed. Ensure that you replace the content within the `{% raw %}{{}}{% endraw %}` with the content specified.
 
 | *Name* | *Value* |
 | --- | --- |
-| guestinfo.ignition.config.data | `{{base64 output from step #1}}` |
+| guestinfo.ignition.config.data | `{% raw %}{{{% endraw %}base64 output from step #1{% raw %}}}{% endraw %}` |
 | guestinfo.ignition.config.data.encoding | `base64` |
 | disk.EnableUUID | `TRUE` |
-| guestinfo.afterburn.initrd.network-kargs | `ip=::::{{hostname}}:ens192:dhcp` |
+| guestinfo.afterburn.initrd.network-kargs | `ip=::::{% raw %}{{{% endraw %}hostname{% raw %}}}{% endraw %}:ens192:dhcp` |
 
 ![Add configuration params vSphere screen - completed](images/add-configuration-params-b.png)
 	
@@ -127,9 +127,9 @@ csr-2s7tn   66s   kubernetes.io/kube-apiserver-client-kubelet   system:serviceac
 
 Approve the certificate signing request for the node-bootstraper by copying the name of the CSR.
 
-To approve the CSR, execute the following command (making sure to replace the `{{csr-name}}` with the name of the CSR):
+To approve the CSR, execute the following command (making sure to replace the `{% raw %}{{{% endraw %}csr-name{% raw %}}}{% endraw %}` with the name of the CSR):
 ```
-oc adm certificate approve {{csr-name}}
+oc adm certificate approve {% raw %}{{{% endraw %}csr-name{% raw %}}}{% endraw %}
 ```
 The output will be similar to:
 ```
@@ -152,9 +152,9 @@ csr-snghc   4s      kubernetes.io/kubelet-serving                 system:node:oc
 ### Step 17 
 Approve the certificate signing request for the node itself. 
 
-To approve the CSR, execute the following command (making sure to replace the `{{csr-name}}` with the name of the CSR):
+To approve the CSR, execute the following command (making sure to replace the `{% raw %}{{{% endraw %}csr-name{% raw %}}}{% endraw %}` with the name of the CSR):
 ```
-oc adm certificate approve {{csr-name}}
+oc adm certificate approve {% raw %}{{{% endraw %}csr-name{% raw %}}}{% endraw %}
 ```
 The output will be similar to:
 ```
